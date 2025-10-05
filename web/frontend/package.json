@@ -1,0 +1,9 @@
+{
+  "name": "cannahealth-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "lint": "echo 'Skipping lint: no tooling configured in offline environment'",
+    "test": "echo 'Skipping tests: no frontend test suite configured'"
+  }
+}

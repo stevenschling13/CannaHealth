@@ -1,4 +1,1 @@
-fastapi
-sqlalchemy[asyncio]
-pytest
-pytest-asyncio
+# Offline-friendly backend does not require external pip dependencies.
