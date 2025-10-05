@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: ["feature/analysis-repo-and-ci", "main"]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: Install lint dependencies
+        run: pip install pyflakes
+      - name: Lint backend
+        run: pyflakes web/backend/app web/backend/tests tools/validate_model.py
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - name: Install frontend deps
+        run: |
+          cd web/frontend
+          npm install
+      - name: Type-check frontend
+        run: |
+          cd web/frontend
+          npm run lint
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: Install dependencies
+        run: pip install -r web/backend/requirements.txt
+      - name: Run pytest
+        run: |
+          cd web/backend
+          pytest -q
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - name: Install dependencies
+        run: |
+          cd web/frontend
+          npm install
+      - name: Run tests
+        run: |
+          cd web/frontend
+          npm test
