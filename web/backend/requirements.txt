@@ -1,0 +1,4 @@
+fastapi
+sqlalchemy[asyncio]
+pytest
+pytest-asyncio
