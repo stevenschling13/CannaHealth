@@ -1,7 +1,9 @@
+"use client";
+
 import { useCallback, useEffect, useState } from "react";
 import { fetchAnalysis } from "../lib/repository";
 import type { StoredAnalysis } from "../lib/db";
-import { SaveAnalysisButton } from "../components/SaveAnalysisButton";
+import { SaveAnalysisButton } from "./SaveAnalysisButton";
 
 export function AuditPage() {
   const [analyses, setAnalyses] = useState<StoredAnalysis[]>([]);
@@ -24,7 +26,7 @@ export function AuditPage() {
   }, []);
 
   useEffect(() => {
-    loadAnalyses();
+    void loadAnalyses();
   }, [loadAnalyses]);
 
   return (
@@ -35,12 +37,17 @@ export function AuditPage() {
       {error && <p role="alert">{error}</p>}
       <ul>
         {analyses.map((analysis) => (
-          <li key={analysis.id}>
+          <li key={analysis.id ?? `${analysis.snapshotId}-${analysis.title}`}
+              data-testid="analysis-row">
             <strong>{analysis.title}</strong> by {analysis.author}
-            {analysis.createdAt && <span> — {new Date(analysis.createdAt).toLocaleString()}</span>}
+            {analysis.createdAt && (
+              <span> — {new Date(analysis.createdAt).toLocaleString()}</span>
+            )}
           </li>
         ))}
       </ul>
     </section>
   );
 }
+
+export default AuditPage;

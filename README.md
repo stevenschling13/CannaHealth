@@ -35,11 +35,16 @@ Install the following tools before working with the project:
    npm run lint
    npm test
    ```
-3. Configure `NEXT_PUBLIC_API_BASE_URL` (Next.js) or `REACT_APP_API_BASE_URL`
-   (Create React App) to point at the backend's public URL. If no environment
-   variable is provided the UI defaults to `http://localhost:8000`.
-4. Start the development server using your preferred tooling (for example Vite
-   or Next.js) once the API base URL is configured.
+3. Configure `NEXT_PUBLIC_API_BASE_URL` to point at the backend's public URL.
+   If no environment variable is provided the UI defaults to
+   `http://localhost:8000`.
+4. Build and start the Next.js frontend:
+   ```bash
+   npm run dev
+   # or
+   npm run build
+   npm run start
+   ```
 
 ## Model validation
 
