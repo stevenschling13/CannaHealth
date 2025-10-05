@@ -1,1 +1,9 @@
-# Offline-friendly backend does not require external pip dependencies.
+fastapi==0.103.2
+pydantic==1.10.12
+sqlalchemy[asyncio]==2.0.21
+aiosqlite==0.19.0
+asyncpg==0.28.0
+alembic==1.12.0
+uvicorn==0.23.2
+pytest==7.4.2
+pytest-asyncio==0.21.1

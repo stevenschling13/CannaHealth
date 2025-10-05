@@ -1,46 +1,48 @@
 """Unit tests for the analysis repository."""
-from __future__ import annotations
-
-from pathlib import Path
-import sys
-
-ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "web/backend"))
-
-import asyncio
 
 import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from app.services.repository import AnalysisRepository, HAS_SQLALCHEMY
-
-if HAS_SQLALCHEMY:  # pragma: no cover - exercised only when dependency installed
-    pytest.skip("SQLAlchemy backend covered in environments with dependency", allow_module_level=True)
-
-
-@pytest.fixture(name="repository")
-def fixture_repository(tmp_path: Path) -> AnalysisRepository:
-    db_path = tmp_path / "analysis.db"
-    repo = AnalysisRepository(db_path)
-    return repo
+from app.models.analysis_schema import metadata
+from app.services.repository import AnalysisRepository
 
 
-def test_create_and_fetch_analysis(repository: AnalysisRepository) -> None:
-    async def _run() -> None:
-        created = await repository.create_analysis(
-            snapshot_id=1,
-            author="tester",
-            title="Daily QA",
-            notes="Sample notes",
-            items=[{"label": "positive", "score": 1, "payload": {"details": "ok"}}],
-        )
+@pytest_asyncio.fixture
+async def engine() -> AsyncEngine:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(metadata.create_all)
+    yield engine
+    await engine.dispose()
 
-        assert created["snapshot_id"] == 1
-        assert created["author"] == "tester"
-        assert len(created["items"]) == 1
-        assert created["items"][0]["payload"] == {"details": "ok"}
 
-        listed = await repository.list_analysis(snapshot_id=1)
-        assert len(listed) == 1
-        assert listed[0]["title"] == "Daily QA"
+@pytest_asyncio.fixture
+async def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(engine, expire_on_commit=False)
 
-    asyncio.run(_run())
+
+@pytest_asyncio.fixture
+async def repository(session_factory: async_sessionmaker[AsyncSession]) -> AnalysisRepository:
+    return AnalysisRepository(session_factory)
+
+
+@pytest.mark.asyncio
+async def test_create_and_fetch_analysis(repository: AnalysisRepository) -> None:
+    created = await repository.create_analysis(
+        snapshot_id=1,
+        author="tester",
+        title="Daily QA",
+        notes="Sample notes",
+        items=[{"label": "positive", "score": 1, "payload": {"details": "ok"}}],
+    )
+
+    assert created["snapshot_id"] == 1
+    assert created["author"] == "tester"
+    assert created["items"][0]["label"] == "positive"
+    assert created["items"][0]["payload"] == {"details": "ok"}
+
+    listed = await repository.list_analysis(snapshot_id=1)
+    assert len(listed) == 1
+    assert listed[0]["id"] == created["id"]
+    assert listed[0]["title"] == "Daily QA"

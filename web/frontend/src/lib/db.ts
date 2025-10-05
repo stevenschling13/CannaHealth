@@ -1,5 +1,6 @@
 export interface StoredAnalysisItem {
   id?: number;
+  analysisId?: number;
   label: string;
   score: number;
   payload?: unknown;
@@ -10,47 +11,69 @@ export interface StoredAnalysis {
   snapshotId: number;
   author: string;
   title: string;
-  notes?: string;
+  notes?: string | null;
   createdAt?: string;
   items: StoredAnalysisItem[];
 }
 
-const DB_NAME = "canna-health";
-const DB_VERSION = 1;
-const ANALYSIS_STORE = "analysis";
+const DEFAULT_BASE_URL = "http://localhost:8000";
 
-export async function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(ANALYSIS_STORE)) {
-        db.createObjectStore(ANALYSIS_STORE, { keyPath: "id", autoIncrement: true });
+function resolveBaseUrl(): string {
+  const envUrl =
+    (typeof process !== "undefined" &&
+      (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.REACT_APP_API_BASE_URL)) ||
+    "";
+  if (envUrl) {
+    return envUrl;
+  }
+  if (typeof window !== "undefined" && window.location.origin) {
+    return window.location.origin;
+  }
+  return DEFAULT_BASE_URL;
+}
+
+export function buildApiUrl(path: string, params?: Record<string, string | number | undefined>): string {
+  const baseUrl = resolveBaseUrl();
+  const url = new URL(path, baseUrl);
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        url.searchParams.set(key, String(value));
       }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+    }
+  }
+  return url.toString();
 }
 
-export async function saveAnalysis(analysis: StoredAnalysis): Promise<number> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(ANALYSIS_STORE, "readwrite");
-    const store = tx.objectStore(ANALYSIS_STORE);
-    const request = store.put(analysis);
-    request.onsuccess = () => resolve(request.result as number);
-    request.onerror = () => reject(request.error);
-  });
-}
+type RequestOptions = RequestInit & { expectJson?: boolean };
 
-export async function listAnalysis(): Promise<StoredAnalysis[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(ANALYSIS_STORE, "readonly");
-    const store = tx.objectStore(ANALYSIS_STORE);
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result as StoredAnalysis[]);
-    request.onerror = () => reject(request.error);
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+  params?: Record<string, string | number | undefined>
+): Promise<T> {
+  const url = buildApiUrl(path, params);
+  const { expectJson = true, ...init } = options;
+  const headers = new Headers(init.headers as HeadersInit | undefined);
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  const response = await fetch(url, {
+    ...init,
+    headers,
   });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Request failed with status ${response.status}`);
+  }
+
+  if (!expectJson) {
+    return undefined as unknown as T;
+  }
+
+  return (await response.json()) as T;
 }

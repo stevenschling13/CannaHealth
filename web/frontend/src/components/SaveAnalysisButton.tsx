@@ -3,9 +3,10 @@ import { createAnalysis } from "../lib/repository";
 
 interface Props {
   snapshotId: number;
+  onSaved?: () => void;
 }
 
-export function SaveAnalysisButton({ snapshotId }: Props) {
+export function SaveAnalysisButton({ snapshotId, onSaved }: Props) {
   const [isSaving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -15,11 +16,13 @@ export function SaveAnalysisButton({ snapshotId }: Props) {
     try {
       await createAnalysis({
         snapshotId,
-        author: "local-user",
-        title: "Quick analysis",
+        author: "dashboard-user",
+        title: `Analysis for snapshot ${snapshotId}`,
+        notes: "Triggered from the admin dashboard",
         items: [],
       });
-      setMessage("Saved analysis to IndexedDB");
+      setMessage("Analysis saved successfully");
+      onSaved?.();
     } catch (error) {
       console.error(error);
       setMessage("Failed to save analysis");
@@ -33,7 +36,7 @@ export function SaveAnalysisButton({ snapshotId }: Props) {
       <button onClick={handleClick} disabled={isSaving}>
         {isSaving ? "Saving..." : "Save analysis"}
       </button>
-      {message && <p>{message}</p>}
+      {message && <p role="status">{message}</p>}
     </div>
   );
 }

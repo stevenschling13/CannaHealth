@@ -2,8 +2,20 @@
   "name": "cannahealth-frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "lint": "echo 'Skipping lint: no tooling configured in offline environment'",
-    "test": "echo 'Skipping tests: no frontend test suite configured'"
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.1",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.3"
   }
 }

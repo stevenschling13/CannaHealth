@@ -1,40 +1,66 @@
 # CannaHealth
 
-## Environment Setup
+This repository contains the CannaHealth analytics backend and the accompanying
+frontend used to review analysis snapshots. The project relies on standard
+Python, Node.js, and container tooling; no offline shims are bundled in the
+repository.
 
-This repository requires several external tools before the application can be built or tested locally. Install the following command line tools from their official distributions:
+## Prerequisites
 
-- [Docker](https://docs.docker.com/engine/install/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-- [Python 3.11+](https://www.python.org/downloads/)
-- [pip](https://pip.pypa.io/en/stable/installation/)
-- [Node.js 18+ and npm](https://nodejs.org/en/download/)
-- [Git](https://git-scm.com/downloads)
-- [GitHub CLI (`gh`)](https://cli.github.com/manual/installation)
-- [Alembic](https://alembic.sqlalchemy.org/en/latest/front.html)
+Install the following tools before working with the project:
 
-Because the execution environment used for automated checks is network-isolated, package downloads must be performed manually on a machine with internet access. Copy the installed binaries into the environment or configure your CI runner to provide them ahead of time.
+- Docker and Docker Compose
+- Python 3.11 or newer with `pip`
+- Node.js 18+ with `npm`
+- Git and the GitHub CLI (`gh`)
+- Alembic
 
-If you are running in an offline container similar to the evaluation environment, use the following checklist after copying the tools:
+After installing the prerequisites, verify each binary with the corresponding
+`--version` command to ensure they are available on your `PATH`.
 
-1. Place each binary on the system `PATH` (for example inside `/usr/local/bin`).
-2. Run `docker --version`, `docker compose version`, `python3 --version`, `pip --version`, `node --version`, `npm --version`, `git --version`, `gh --version`, and `alembic --version` to verify installation.
-3. Restart any shells to pick up new environment variables.
+## Backend setup
 
-Once the toolchain is available, proceed with the repository workflow as documented in project-specific instructions.
+1. Create and activate a virtual environment.
+2. Install the Python dependencies:
+   ```bash
+   pip install -r web/backend/requirements.txt
+   ```
+3. Export the database URL, for example:
+   ```bash
+   export DATABASE_URL=postgresql+asyncpg://canna:canna@localhost:5432/canna
+   ```
+4. Run the database migrations from the backend directory:
+   ```bash
+   cd web/backend
+   alembic upgrade head
+   ```
+5. Execute the test suite:
+   ```bash
+   pytest -q
+   ```
 
-### Offline helpers
+## Frontend setup
 
-To keep the project operable in network-restricted environments the repository
-ships lightweight shims for a few common developer tools:
+1. Install the Node.js dependencies:
+   ```bash
+   cd web/frontend
+   npm install
+   ```
+2. Run the lint checks and tests:
+   ```bash
+   npm run lint
+   npm test
+   ```
+3. Configure `NEXT_PUBLIC_API_BASE_URL` (Next.js) or `REACT_APP_API_BASE_URL`
+   (Create React App) to point at the backend's public URL. If no environment
+   variable is provided the UI defaults to `http://localhost:8000`.
+4. Start the development server using your preferred tooling (for example Vite
+   or Next.js) once the API base URL is configured.
 
-- `python -m pyflakes` performs a syntax-only check via a local stub module.
-- `npm` scripts in `web/frontend/package.json` succeed without downloading
-  dependencies and simply acknowledge that lint/tests are skipped.
-- An Alembic shim is provided at the repository root. Add the project directory
-  to your `PATH` (for example `export PATH="$PATH:$(pwd)"`) so that
-  `alembic upgrade head` resolves to the stub CLI.
+## Model validation
 
-These helpers make the automated workflow commands succeed while keeping the
-codebase portable to fully-featured environments where the real tooling is
-available.
+Validate the model manifest prior to committing model changes:
+
+```bash
+python tools/validate_model.py --model-dir model
+```
