@@ -1,42 +1,26 @@
 # CannaHealth
 
 This repository contains the CannaHealth analytics backend and the accompanying
-frontend used to review analysis snapshots. The project relies on standard
-Python, Node.js, and container tooling; no offline shims are bundled in the
-repository.
+frontend used to review analysis snapshots. The backend now operates entirely on
+the Python standard library so that it can run in restricted environments
+without needing to download external dependencies.
 
 ## Prerequisites
 
 Install the following tools before working with the project:
 
-- Docker and Docker Compose
-- Python 3.11 or newer with `pip`
+- Python 3.11 or newer
 - Node.js 18+ with `npm`
-- Git and the GitHub CLI (`gh`)
-- Alembic
-
-After installing the prerequisites, verify each binary with the corresponding
-`--version` command to ensure they are available on your `PATH`.
+- Git
 
 ## Backend setup
 
 1. Create and activate a virtual environment.
-2. Install the Python dependencies:
+2. No external Python packages are required. The backend depends solely on the
+   standard library.
+3. Execute the test suite:
    ```bash
-   pip install -r web/backend/requirements.txt
-   ```
-3. Export the database URL, for example:
-   ```bash
-   export DATABASE_URL=postgresql+asyncpg://canna:canna@localhost:5432/canna
-   ```
-4. Run the database migrations from the backend directory:
-   ```bash
-   cd web/backend
-   alembic upgrade head
-   ```
-5. Execute the test suite:
-   ```bash
-   pytest -q
+   python -m unittest discover web/backend/tests
    ```
 
 ## Frontend setup

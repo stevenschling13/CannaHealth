@@ -1,23 +1,21 @@
-"""Repository helpers for persisting analysis snapshots using SQLAlchemy."""
+"""In-memory repository helpers for analysis persistence."""
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
-from sqlalchemy import Select, select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
-
-from app.models.analysis_schema import analysis_item_table, analysis_table, serialize_analysis, serialize_analysis_item
+from app.models.analysis_schema import AnalysisItemRecord, AnalysisRecord, build_analysis
 
 
 class AnalysisRepository:
-    """Provide CRUD helpers for analysis entities."""
+    """Store analysis records in memory with async-safe helpers."""
 
-    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
-        self._session_factory = session_factory
-
-    @classmethod
-    def from_engine(cls, engine: AsyncEngine) -> "AnalysisRepository":
-        return cls(async_sessionmaker(engine, expire_on_commit=False))
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+        self._next_analysis_id = 1
+        self._next_item_id = 1
+        self._analysis: Dict[int, AnalysisRecord] = {}
 
     async def create_analysis(
         self,
@@ -27,54 +25,86 @@ class AnalysisRepository:
         notes: Optional[str],
         items: Iterable[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        async with self._session_factory() as session:
-            async with session.begin():
-                result = await session.execute(
-                    analysis_table.insert().values(
-                        snapshot_id=snapshot_id,
-                        author=author,
-                        title=title,
-                        notes=notes,
+        async with self._lock:
+            analysis_id = self._next_analysis_id
+            self._next_analysis_id += 1
+            created_at = datetime.now(timezone.utc)
+            record = build_analysis(
+                analysis_id=analysis_id,
+                snapshot_id=snapshot_id,
+                author=author,
+                title=title,
+                notes=notes,
+                created_at=created_at,
+            )
+
+            for item in items:
+                item_id = self._next_item_id
+                self._next_item_id += 1
+                record.items.append(
+                    AnalysisItemRecord(
+                        id=item_id,
+                        analysis_id=analysis_id,
+                        label=item["label"],
+                        score=int(item["score"]),
+                        payload=item.get("payload") if isinstance(item.get("payload"), dict) else item.get("payload"),
                     )
                 )
-                analysis_id = int(result.inserted_primary_key[0])
-                item_payload = [
-                    {
-                        "analysis_id": analysis_id,
-                        "label": item["label"],
-                        "score": item["score"],
-                        "payload": item.get("payload"),
-                    }
-                    for item in items
-                ]
-                if item_payload:
-                    await session.execute(analysis_item_table.insert(), item_payload)
-        return await self.get_analysis(analysis_id)
+
+            self._analysis[analysis_id] = record
+            return record.serialize()
 
     async def get_analysis(self, analysis_id: int) -> Dict[str, Any]:
-        async with self._session_factory() as session:
-            analysis_stmt: Select[Any] = select(analysis_table).where(analysis_table.c.id == analysis_id)
-            result = await session.execute(analysis_stmt)
-            row = result.mappings().first()
-            if row is None:
+        async with self._lock:
+            record = self._analysis.get(analysis_id)
+            if record is None:
                 raise KeyError(f"Analysis {analysis_id} not found")
-
-            item_stmt: Select[Any] = select(analysis_item_table).where(
-                analysis_item_table.c.analysis_id == analysis_id
-            )
-            item_result = await session.execute(item_stmt)
-            items = [serialize_analysis_item(item) for item in item_result.mappings().all()]
-
-        data = serialize_analysis(row)
-        data["items"] = items
-        return data
+            return record.serialize()
 
     async def list_analysis(self, snapshot_id: Optional[int] = None) -> List[Dict[str, Any]]:
-        async with self._session_factory() as session:
-            stmt: Select[Any] = select(analysis_table)
-            if snapshot_id is not None:
-                stmt = stmt.where(analysis_table.c.snapshot_id == snapshot_id)
-            stmt = stmt.order_by(analysis_table.c.created_at.desc(), analysis_table.c.id.desc())
-            result = await session.execute(stmt)
-            rows = result.mappings().all()
-        return [serialize_analysis(row) for row in rows]
+        async with self._lock:
+            records = list(self._analysis.values())
+        if snapshot_id is not None:
+            records = [record for record in records if record.snapshot_id == snapshot_id]
+        records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
+        return [record.serialize() for record in records]
+
+    async def clear(self) -> None:
+        async with self._lock:
+            self._analysis.clear()
+            self._next_analysis_id = 1
+            self._next_item_id = 1
+
+    async def export_state(self) -> Dict[str, Any]:
+        async with self._lock:
+            return {
+                "next_analysis_id": self._next_analysis_id,
+                "next_item_id": self._next_item_id,
+                "analysis": [record.serialize() for record in self._analysis.values()],
+            }
+
+    async def import_state(self, state: Dict[str, Any]) -> None:
+        async with self._lock:
+            self._analysis.clear()
+            self._next_analysis_id = int(state.get("next_analysis_id", 1))
+            self._next_item_id = int(state.get("next_item_id", 1))
+            for data in state.get("analysis", []):
+                record = AnalysisRecord(
+                    id=int(data["id"]),
+                    snapshot_id=int(data["snapshot_id"]),
+                    author=str(data["author"]),
+                    title=str(data["title"]),
+                    notes=data.get("notes"),
+                    created_at=datetime.fromisoformat(data["created_at"]),
+                )
+                for item in data.get("items", []):
+                    record.items.append(
+                        AnalysisItemRecord(
+                            id=int(item["id"]),
+                            analysis_id=int(item["analysis_id"]),
+                            label=str(item["label"]),
+                            score=int(item["score"]),
+                            payload=item.get("payload"),
+                        )
+                    )
+                self._analysis[record.id] = record

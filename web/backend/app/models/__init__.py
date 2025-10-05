@@ -1,17 +1,17 @@
-"""Expose application models."""
+"""Expose application model helpers."""
 
 from .analysis_schema import (
-    analysis_item_table,
-    analysis_table,
-    metadata,
+    AnalysisItemRecord,
+    AnalysisRecord,
+    build_analysis,
     serialize_analysis,
     serialize_analysis_item,
 )
 
 __all__ = [
-    "analysis_item_table",
-    "analysis_table",
-    "metadata",
+    "AnalysisItemRecord",
+    "AnalysisRecord",
+    "build_analysis",
     "serialize_analysis",
     "serialize_analysis_item",
 ]

@@ -1,57 +1,66 @@
-"""Admin API router exposing analysis endpoints."""
+"""Lightweight admin service exposing analysis helpers."""
 from __future__ import annotations
 
-from typing import Any, Optional
+"""Lightweight admin service exposing analysis helpers."""
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncEngine
+from dataclasses import dataclass, field
+from typing import Any, Iterable, Optional
 
 from app.services.repository import AnalysisRepository
 
-router = APIRouter(prefix="/admin", tags=["admin"])
 
-
-class AnalysisItemPayload(BaseModel):
+@dataclass
+class AnalysisItemPayload:
     label: str
     score: int
     payload: Optional[dict[str, Any]] = None
 
+    def to_record(self) -> dict[str, Any]:
+        return {
+            "label": self.label,
+            "score": int(self.score),
+            "payload": self.payload,
+        }
 
-class AnalysisPayload(BaseModel):
-    snapshot_id: int = Field(..., ge=1)
-    author: str = Field(..., min_length=1)
-    title: str = Field(..., min_length=1)
+
+@dataclass
+class AnalysisPayload:
+    snapshot_id: int
+    author: str
+    title: str
     notes: Optional[str] = None
-    items: list[AnalysisItemPayload] = Field(default_factory=list)
+    items: list[AnalysisItemPayload] = field(default_factory=list)
+
+    def to_records(self) -> Iterable[dict[str, Any]]:
+        for item in self.items:
+            yield item.to_record()
 
 
-async def get_repository(request: Request) -> AnalysisRepository:
-    repo: AnalysisRepository | None = getattr(request.app.state, "analysis_repository", None)
-    if repo is not None:
-        return repo
+class AdminService:
+    """Facade used by HTTP layers or scripts to interact with the repository."""
 
-    engine = getattr(request.app.state, "db_engine", None)
-    if engine is None or not isinstance(engine, AsyncEngine):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database engine not configured")
+    def __init__(self, repository: AnalysisRepository | None = None) -> None:
+        self._repository = repository or AnalysisRepository()
 
-    repo = AnalysisRepository.from_engine(engine)
-    request.app.state.analysis_repository = repo
-    return repo
+    async def list_analysis(self, snapshot_id: Optional[int] = None) -> list[dict[str, Any]]:
+        return await self._repository.list_analysis(snapshot_id)
+
+    async def create_analysis(self, payload: AnalysisPayload) -> dict[str, Any]:
+        return await self._repository.create_analysis(
+            snapshot_id=payload.snapshot_id,
+            author=payload.author,
+            title=payload.title,
+            notes=payload.notes,
+            items=list(payload.to_records()),
+        )
+
+    @property
+    def repository(self) -> AnalysisRepository:
+        return self._repository
 
 
-@router.get("/analysis")
-async def list_analysis(snapshot_id: int | None = None, repo: AnalysisRepository = Depends(get_repository)):
-    return await repo.list_analysis(snapshot_id=snapshot_id)
-
-
-@router.post("/analysis", status_code=status.HTTP_201_CREATED)
-async def create_analysis(payload: AnalysisPayload, repo: AnalysisRepository = Depends(get_repository)):
-    created = await repo.create_analysis(
-        snapshot_id=payload.snapshot_id,
-        author=payload.author,
-        title=payload.title,
-        notes=payload.notes,
-        items=[item.dict() for item in payload.items],
-    )
-    return created
+__all__ = [
+    "AdminService",
+    "AnalysisPayload",
+    "AnalysisItemPayload",
+]
