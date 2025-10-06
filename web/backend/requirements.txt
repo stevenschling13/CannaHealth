@@ -1,1 +1,7 @@
-# The backend currently runs purely on the Python standard library.
+aiohttp==3.9.1
+aiohttp-cors==0.7.0
+aiosqlite==0.19.0
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
+itsdangerous==2.1.2

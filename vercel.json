@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "installCommand": "cd web/frontend && npm install",
+  "buildCommand": "cd web/frontend && npm run build",
+  "devCommand": "cd web/frontend && npm run dev",
+  "outputDirectory": "web/frontend/.next",
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.11"
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_API_BASE_URL": "https://cannahealth-api.example.com"
+  }
+}
