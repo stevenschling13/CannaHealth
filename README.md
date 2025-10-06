@@ -16,8 +16,10 @@ Install the following tools before working with the project:
 ## Backend setup
 
 1. Create and activate a virtual environment.
-2. No external Python packages are required. The backend depends solely on the
-   standard library.
+2. Install dependencies:
+   ```bash
+   pip install -r web/backend/requirements.txt
+   ```
 3. Execute the test suite:
    ```bash
    python -m unittest discover web/backend/tests
