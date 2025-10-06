@@ -1,1 +1,2 @@
-# The backend currently runs purely on the Python standard library.
+aiohttp==3.9.1
+aiohttp-cors==0.7.0
