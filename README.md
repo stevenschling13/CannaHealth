@@ -38,7 +38,11 @@ Install the following tools before working with the project:
 3. Configure `NEXT_PUBLIC_API_BASE_URL` to point at the backend's public URL.
    If no environment variable is provided the UI defaults to
    `http://localhost:8000`.
-4. Build and start the Next.js frontend:
+4. Run a full deployment audit locally (optional, mirrors the CI workflow):
+   ```bash
+   python tools/audit_deployment.py
+   ```
+5. Build and start the Next.js frontend:
    ```bash
    npm run dev
    # or
@@ -53,3 +57,11 @@ Validate the model manifest prior to committing model changes:
 ```bash
 python tools/validate_model.py --model-dir model
 ```
+
+## Deployment audit tooling
+
+The `tools/audit_deployment.py` script inspects the GitHub Actions workflows
+and recent log files to ensure the automated checks exercise the build, test,
+and lint steps required for production readiness. The `deployment-audit`
+workflow runs this script with the `--check` flag so that CI fails if any of
+the expected commands disappear from the pipeline.
