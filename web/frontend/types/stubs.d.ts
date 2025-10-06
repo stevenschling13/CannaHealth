@@ -41,6 +41,12 @@ declare module "crypto" {
   export function randomUUID(): string;
 }
 
+declare module "node:test" {
+  export function beforeEach(fn: () => void | Promise<void>): void;
+  export function describe(name: string, fn: () => void | Promise<void>): void;
+  export function it(name: string, fn: () => void | Promise<void>): void;
+}
+
 declare const fetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
 
 declare var process: {

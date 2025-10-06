@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import type { StoredAnalysis, StoredAnalysisItem } from "../lib/db";
+import type { StoredAnalysis, StoredAnalysisItem } from "../lib/db.js";
 
 export interface CreateAnalysisInput {
   snapshotId: number;

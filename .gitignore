@@ -1,0 +1,3 @@
+dist-test/
+web/frontend/dist-test/
+**/*.tsbuildinfo

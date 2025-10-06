@@ -1,5 +1,11 @@
-import { describe, expect, it, beforeEach } from "vitest";
-import { AnalysisStore } from "./analysisStore";
+import { beforeEach, describe, it } from "node:test";
+import { AnalysisStore } from "./analysisStore.js";
+
+function expect(condition: unknown, message: string): void {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
 
 describe("AnalysisStore", () => {
   let store: AnalysisStore;
@@ -10,8 +16,11 @@ describe("AnalysisStore", () => {
 
   it("seeds an initial analysis", () => {
     const analyses = store.list();
-    expect(analyses).toHaveLength(1);
-    expect(analyses[0].title).toContain("Initial");
+    expect(analyses.length === 1, "expected exactly one seeded analysis");
+    expect(
+      analyses[0]?.title.includes("Initial"),
+      "expected seeded analysis title to mention 'Initial'"
+    );
   });
 
   it("creates new analyses with generated ids", () => {
@@ -20,11 +29,14 @@ describe("AnalysisStore", () => {
       author: "QA",
       title: "Review",
     });
-    expect(created.id).toBeGreaterThan(1);
-    expect(created.items.length).toBeGreaterThan(0);
+    expect((created.id ?? 0) > 1, "expected create to assign a unique id");
+    expect(created.items.length > 0, "expected analysis to contain at least one item");
 
     const analyses = store.list();
-    expect(analyses.find((analysis) => analysis.id === created.id)).toBeDefined();
+    expect(
+      analyses.some((analysis) => analysis.id === created.id),
+      "expected created analysis to be discoverable in the list"
+    );
   });
 
   it("filters by snapshot id", () => {
@@ -35,6 +47,10 @@ describe("AnalysisStore", () => {
     });
 
     const filtered = store.list(7);
-    expect(filtered.every((analysis) => analysis.snapshotId === 7)).toBe(true);
+    expect(filtered.length > 0, "expected at least one filtered analysis");
+    expect(
+      filtered.every((analysis) => analysis.snapshotId === 7),
+      "expected all filtered analyses to match the snapshot id"
+    );
   });
 });
