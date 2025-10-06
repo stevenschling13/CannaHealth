@@ -1,0 +1,20 @@
+name: Validate Model
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "model/**"
+      - "tools/validate_model.py"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: Validate model manifest
+        run: python tools/validate_model.py --model-dir model
