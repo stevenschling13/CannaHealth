@@ -1,6 +1,7 @@
-"""Tests for the in-memory analysis repository."""
+"""Tests for the SQLite-backed analysis repository."""
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -11,7 +12,14 @@ from app.services.repository import AnalysisRepository
 
 class AnalysisRepositoryTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
-        self.repository = AnalysisRepository()
+        self._tempdir = tempfile.TemporaryDirectory()
+        db_path = Path(self._tempdir.name) / "cannahealth.db"
+        self.repository = AnalysisRepository(db_path=str(db_path))
+        await self.repository.clear()
+
+    async def asyncTearDown(self) -> None:
+        await self.repository.clear()
+        self._tempdir.cleanup()
 
     async def test_create_and_fetch_analysis(self) -> None:
         created = await self.repository.create_analysis(
