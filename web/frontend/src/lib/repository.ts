@@ -1,5 +1,7 @@
 import { apiRequest, StoredAnalysis } from "./db";
 
+const ANALYSIS_ENDPOINT = "/api/admin/analysis";
+
 export interface CreateAnalysisPayload {
   snapshotId: number;
   author: string;
@@ -57,7 +59,7 @@ export async function createAnalysis(payload: CreateAnalysisPayload): Promise<St
       payload: item.payload,
     })),
   };
-  const response = await apiRequest<ApiAnalysis>("/admin/analysis", {
+  const response = await apiRequest<ApiAnalysis>(ANALYSIS_ENDPOINT, {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -65,7 +67,7 @@ export async function createAnalysis(payload: CreateAnalysisPayload): Promise<St
 }
 
 export async function fetchAnalysis(snapshotId?: number): Promise<StoredAnalysis[]> {
-  const response = await apiRequest<ApiAnalysis[]>("/admin/analysis", {}, {
+  const response = await apiRequest<ApiAnalysis[]>(ANALYSIS_ENDPOINT, {}, {
     snapshot_id: snapshotId,
   });
   return response.map(normalizeAnalysis);
