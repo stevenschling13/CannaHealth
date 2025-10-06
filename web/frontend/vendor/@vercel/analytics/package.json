@@ -1,0 +1,22 @@
+{
+  "name": "@vercel/analytics",
+  "version": "1.0.0-shim",
+  "description": "Offline-compatible shim for @vercel/analytics",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "types": "./index.d.ts"
+    },
+    "./react": {
+      "import": "./react.js",
+      "require": "./react.cjs",
+      "types": "./react.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./index.d.ts"
+}
